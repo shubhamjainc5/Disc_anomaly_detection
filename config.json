@@ -1,0 +1,11 @@
+
+{
+    "db_creds" : {
+    "database": "discoveryip-dev",
+    "user": "postgres",
+    "password": "73Y1ckO=S])][.R!",
+    "host": "discovery-iip.postgres.database.azure.com",
+    "port": "5432",
+    "schema": "public"
+                }
+}

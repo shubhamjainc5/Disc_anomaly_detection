@@ -1,0 +1,39 @@
+# Python and Flask
+*.pyc
+__pycache__/
+venv/
+env/
+*.env
+#logs/
+
+# Logs
+*.log
+
+# Environment variables
+.env
+
+# Azure
+.azure/
+.vscode/
+
+# OpenAI
+.openai/
+
+# IDE specific
+.idea/
+.vscode/
+
+# Package files
+*.egg-info/
+dist/
+build/
+
+# Compiled files
+*.pyo
+*.pyd
+*.pyc
+*.so
+*.dll
+
+# Miscellaneous
+.DS_Store
