@@ -2,7 +2,7 @@
 
 import logging
 
-logging.basicConfig(filename='logs/app.log',
+logging.basicConfig(filename='app.log',
                     filemode='a',
     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s', level=logging.DEBUG)
 

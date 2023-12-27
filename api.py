@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from typing import Dict, List
 from pyod_ad import inference_model_result
 import uvicorn
-from logging_handler import Logger
+#from logging_handler import Logger
 
 app = FastAPI()
 

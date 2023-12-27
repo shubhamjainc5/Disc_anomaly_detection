@@ -7,5 +7,14 @@
     "host": "discovery-iip.postgres.database.azure.com",
     "port": "5432",
     "schema": "public"
-                }
+                },
+    "openai_cred":{
+
+    "AZURE_DEPLOYMENT_NAME" : "gpt-4-prod",
+    "AZURE_MODEL_NAME" : "gpt-4",
+    "OPENAI_API_TYPE" : "azure",
+    "OPENAI_API_VERSION" : "2023-07-01-preview",
+    "OPENAI_API_BASE" : "https://c5-openai-discovery.openai.azure.com/",
+    "OPEN_AI_API_KEY" : "e0c1590bbb5d46789f56be370a563f7a"
+    }
 }
