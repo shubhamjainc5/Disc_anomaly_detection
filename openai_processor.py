@@ -60,6 +60,7 @@ class Reasoning(BaseModel):
 
     anomaly_date: str = Field(description="anomaly dates which were present in table data")
     reason: str = Field(description="casual reasoning with respect to selected anomaly date")
+    reason_html: str = Field(description="casual reasoning in html format")
 
 
 class AnomalyReasoningPlainText(BaseModel):
@@ -67,7 +68,7 @@ class AnomalyReasoningPlainText(BaseModel):
     AnomalyReasoning: List[Reasoning] = Field(description="a set of anomalous points with their date and it's casual reasoning in dictionary format")
 
 
-def generate_reasoning(table_data) -> (List[Dict[str,str]], int, float):
+def generate_reasoning(table_data:str, anomaly_dates:List) -> (List[Dict[str,str]], int, float):
     print('\n---------Casual Reasoning-------------\n')
 
     cnt = 0
@@ -80,7 +81,7 @@ def generate_reasoning(table_data) -> (List[Dict[str,str]], int, float):
         model = AzureChatOpenAI(
             deployment_name=domain_config['AZURE_DEPLOYMENT_NAME'],
             model_name=domain_config['AZURE_MODEL_NAME'],
-            max_tokens=500,
+            max_tokens=1000,
             temperature=0.5,
             verbose=True,
             request_timeout=60
@@ -91,11 +92,11 @@ def generate_reasoning(table_data) -> (List[Dict[str,str]], int, float):
         reason_parser = PydanticOutputParser(pydantic_object=AnomalyReasoningPlainText)
         reason_format_instructions = reason_parser.get_format_instructions()
 
-        reason_template = PromptTemplate(input_variables=["table_data"], template=reasoning_prompt,
+        reason_template = PromptTemplate(input_variables=["table_data","anomaly_dates"], template=reasoning_prompt,
                                         partial_variables={"format_instructions": reason_format_instructions})
         
-        reason_prompt = reason_template.format(table_data=table_data, format_instructions = reason_format_instructions)
-        print(reason_prompt)
+        reason_prompt = reason_template.format(table_data=table_data, anomaly_dates= str(anomaly_dates), format_instructions = reason_format_instructions)
+        # print(reason_prompt)
 
         human_message_prompt = HumanMessagePromptTemplate(prompt=reason_template)
 
@@ -103,7 +104,7 @@ def generate_reasoning(table_data) -> (List[Dict[str,str]], int, float):
 
         reason_chain = LLMChain(llm=model, prompt=chat_prompt, output_key="generated_reasoning")
 
-        gpt_op = reason_chain({"table_data": table_data})
+        gpt_op = reason_chain({"table_data": table_data, "anomaly_dates": str(anomaly_dates)})
         Logger.info("\n Response from GPT : {0}".format(gpt_op))
 
         generated_reasons = gpt_op['generated_reasoning']
@@ -123,8 +124,12 @@ def generate_reasoning(table_data) -> (List[Dict[str,str]], int, float):
             reason_result = ast.literal_eval(reason_result)
             Logger.info('\n Regex json reason content parsed: {0}'.format(reason_result))
 
-        # if len(reason_result) != cnt_dt:
-        #     raise AssertionError(f"Count of anamolous dates is not {cnt_dt}")
+        gpt_dt = [ res["anomaly_date"] for res in reason_result]
+
+        if set(gpt_dt) == set(anomaly_dates) and len(gpt_dt) == len(anomaly_dates):
+            pass
+        else:
+            raise AssertionError(f"Count of anamolous dates in LLM output does not match with provided dates.")
 
         return reason_result
 

@@ -74,12 +74,13 @@ def prepare_test_json(test_df, llm_op):
 
         match_idx = llm_anomaly_dt.index(row["week_start"]) if row["week_start"] in llm_anomaly_dt else -1
         narr = '' if match_idx==-1 else llm_op[match_idx]['reason']
+        narr_html = '' if match_idx==-1 else llm_op[match_idx]['reason_html']
 
         dict_row = {
             "week_start":row["week_start"],
             "kpi_values": value_dict,
             "narrative":narr,
-            "narrativeHtml":"",
+            "narrativeHtml":narr_html,
             "Anomaly_flag":row["Anomaly_flag"],
             "Anomaly_score":row["Anomaly_score"],
         }
@@ -163,10 +164,10 @@ def inference_model_result():
     test_df.loc[:,'Anomaly_flag'] = y_pred_test
     test_df.loc[:,'Anomaly_score'] = y_test_scores
 
-    cnt_anomaly = y_pred_test.sum()
+    anomaly_dates = list(test_df[y_pred_test==1]['week_start'])
 
-    if cnt_anomaly>0:
-        op ,api_cnt, api_tokens = generate_reasoning(narrative_df.to_csv())
+    if len(anomaly_dates)>0:
+        op ,api_cnt, api_tokens = generate_reasoning(narrative_df.to_csv(), anomaly_dates)
         Logger.info(f"{api_cnt} API Calls were made with an average of {api_tokens} tokens per call for narrative generation")
         print(op)
     else:
