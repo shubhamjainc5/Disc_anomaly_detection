@@ -30,18 +30,15 @@ import copy
 
 from database_connector import SQLDataBase
 from dateutil.relativedelta import relativedelta
-import pprint
+import traceback
 
-kpi_cols = ['booked_revenue', 'booked_units', 'shipped_revenue',
-    'cancel_revenue', 'shipped_margin', 'shipped_units', 'cancel_units',
-    'return_units', 'visits']
 
 with open("config.json", "r") as f:
     domain_config = json.load(f)
 
 DB_CREDS = domain_config["db_creds"]
 
-def merge_quarter_entries(df):
+def merge_quarter_entries(df, kpi_cols):
     new_df = copy.deepcopy(df)
     
     remove_idx = []
@@ -59,7 +56,7 @@ def merge_quarter_entries(df):
     return new_df
 
 
-def prepare_test_json(test_df, llm_op):
+def prepare_test_json(test_df, llm_op, kpi_cols):
     test_df = copy.deepcopy(test_df)
     llm_anomaly_dt = [ op['anomaly_date'] for op in llm_op]
     rows_list = []
@@ -89,6 +86,34 @@ def prepare_test_json(test_df, llm_op):
     
     return rows_list
 
+def add_wow_vars(narrative_df:pd.DataFrame, kpi_cols:list)->pd.DataFrame:
+    
+    narrative_vars = copy.deepcopy(narrative_df)
+    narrative_vars = narrative_vars.sort_index()
+    start_index = narrative_vars.index[0]
+    
+    for idx in narrative_vars.index:
+
+        if idx==start_index:
+            prev_idx = idx
+            pass
+        else:
+            for col in kpi_cols:
+                prev_value = narrative_vars.loc[prev_idx,col]
+                curr_value = narrative_vars.loc[idx,col]
+                perc_change = str( round(100*(curr_value-prev_value)/prev_value,1) )+'%'
+                narrative_vars.loc[idx,col+'_wow_change'] = perc_change
+            prev_idx = idx
+
+    new_order_cols = ['week_start']
+    for col in kpi_cols:
+        new_order_cols.append(col)
+        new_order_cols.append(col+'_wow_change')
+    
+    narrative_vars = narrative_vars[new_order_cols]
+        
+    return narrative_vars
+
 
 def _execute_sql_query(sql_db, sql_query):
     """function to execute sql query"""
@@ -106,118 +131,144 @@ def _execute_sql_query(sql_db, sql_query):
 sql_db = SQLDataBase(DB_CREDS)
 
 
-def inference_model_result():
-    # result = pd.read_csv('Train_lenovo_aggdata_202312141347.csv')
-    # test_df = pd.read_csv('test_lenovo_aggdata_202312141347.csv')
+def inference_model_result(requestId : str, kpi_cols:list, use_cache:bool):
 
-    sql_query = "SELECT * FROM spt_anomaly_data"
-    df, _ = _execute_sql_query(sql_db, sql_query)
 
-    merged_df = merge_quarter_entries(df)
+    try:
+        sql_query = "SELECT * FROM spt_anomaly_data"
+        df, _ = _execute_sql_query(sql_db, sql_query)
 
-    narrative_df = copy.deepcopy(merged_df)
+        #apply columns filter
+        df = df[['week_start']+ kpi_cols]
 
-    window_num = 12
-    for col in kpi_cols:
-        avg_kpi = merged_df[col].rolling(window=window_num).mean().dropna()
-        dev_kpi = merged_df[col].rolling(window=window_num).std().dropna()
-        merged_df['avg_'+col] = avg_kpi
-        merged_df['ub_'+col] = avg_kpi + dev_kpi
-        merged_df['lb_'+col] = avg_kpi - dev_kpi
-        merged_df['dev_'+col] = dev_kpi
+        merged_df = merge_quarter_entries(df, kpi_cols)
 
-    input_df = copy.deepcopy(merged_df)
+        narrative_df = copy.deepcopy(merged_df)
+        narrative_vars = add_wow_vars(narrative_df, kpi_cols)
 
-    merged_df['week_start'] = merged_df['week_start'].apply(lambda x: pd.to_datetime(x))
+        window_num = 12
+        for col in kpi_cols:
+            avg_kpi = merged_df[col].rolling(window=window_num).mean().dropna()
+            dev_kpi = merged_df[col].rolling(window=window_num).std().dropna()
+            merged_df['avg_'+col] = avg_kpi
+            merged_df['ub_'+col] = avg_kpi + dev_kpi
+            merged_df['lb_'+col] = avg_kpi - dev_kpi
+            merged_df['dev_'+col] = dev_kpi
 
-    last_date = merged_df.iloc[-1,:]['week_start']
-    start_date = last_date + relativedelta(months=-9)
+        input_df = copy.deepcopy(merged_df)
 
-    train_df = input_df.loc[(merged_df['week_start'] < start_date)]
-    test_df = input_df.loc[(merged_df['week_start'] >= start_date)]
-    narrative_df = narrative_df.loc[(merged_df['week_start'] >= start_date)]
+        merged_df['week_start'] = merged_df['week_start'].apply(lambda x: pd.to_datetime(x))
 
-    x_train = train_df[kpi_cols]
-    x_test = test_df[kpi_cols]
+        last_date = merged_df.iloc[-1,:]['week_start']
+        start_date = last_date + relativedelta(months=-9)
 
-    # train ECOD detector
-    clf_name = 'ECOD'
-    clf = ECOD()
+        train_df = input_df.loc[(merged_df['week_start'] < start_date)]
+        test_df = input_df.loc[(merged_df['week_start'] >= start_date)]
+        narrative_vars = narrative_vars.loc[(merged_df['week_start'] >= start_date)]
 
-    # you could try parallel version as well.
-    # clf = ECOD(n_jobs=2)
-    clf.fit(x_train)
-    # save the model
-    dump(clf, 'clf.joblib')
+        x_train = train_df[kpi_cols]
+        x_test = test_df[kpi_cols]
 
-    # load the model
-    clf1 = load('clf.joblib')
+        # train ECOD detector
+        clf_name = 'ECOD'
+        clf = ECOD()
 
-    # get the prediction labels and outlier scores of the training data
-    # y_train_pred = clf1.labels_  # binary labels (0: inliers, 1: outliers)
-    # y_train_scores = clf1.decision_scores_  # raw outlier scores
+        # you could try parallel version as well.
+        # clf = ECOD(n_jobs=2)
+        clf.fit(x_train)
+        # save the model
+        dump(clf, 'clf.joblib')
 
-    # get the prediction on the test data
-    y_pred_test = clf1.predict(x_test)# outlier labels (0 or 1)
-    y_test_scores = clf1.decision_function(x_test)# outlier scores
+        # load the model
+        clf1 = load('clf.joblib')
 
-    test_df.loc[:,'Anomaly_flag'] = y_pred_test
-    test_df.loc[:,'Anomaly_score'] = y_test_scores
+        # get the prediction labels and outlier scores of the training data
+        # y_train_pred = clf1.labels_  # binary labels (0: inliers, 1: outliers)
+        # y_train_scores = clf1.decision_scores_  # raw outlier scores
 
-    anomaly_dates = list(test_df[y_pred_test==1]['week_start'])
+        # get the prediction on the test data
+        y_pred_test = clf1.predict(x_test)# outlier labels (0 or 1)
+        y_test_scores = clf1.decision_function(x_test)# outlier scores
 
-    if len(anomaly_dates)>0:
-        op ,api_cnt, api_tokens = generate_reasoning(narrative_df.to_csv(), anomaly_dates)
-        Logger.info(f"{api_cnt} API Calls were made with an average of {api_tokens} tokens per call for narrative generation")
-        print(op)
-    else:
-        op = []
+        test_df.loc[:,'Anomaly_flag'] = y_pred_test
+        test_df.loc[:,'Anomaly_score'] = y_test_scores
 
-    # fig, ax = plt.subplots(10, figsize=(10,6), sharex=True)
+        anomaly_dates = list(test_df[y_pred_test==1]['week_start'])
 
-    # #anomaly
-    # a = test_df.loc[y_pred_test == 1]
-    # outlier_index=list(a.index)
+        if len(anomaly_dates)>0:
+            op ,api_cnt, api_tokens, llm_status = generate_reasoning(narrative_vars.to_csv(), anomaly_dates, use_cache)
+            Logger.info(f"{api_cnt} API Calls were made with an average of {api_tokens} tokens per call for narrative generation")
 
-    # ax[0].plot(test_df['booked_revenue'], color='black', label = 'ghfjgvgv', linewidth=1.5)
-    # ax[0].scatter(a.index ,a['booked_revenue'], color='red', label = 'Anomaly', s=16)
+            if llm_status in ["LLMParsed","LLMRetryParsed"]:
+                status_code = 200
+                status_msg = "Successfully generated the narrative for the predicted anomalies"
+            elif llm_status in ["LLMServerError"]:
+                status_code = 300
+                status_msg = "LLM Server not responding"
+            else:
+                status_code = 300
+                status_msg = "Application Server connection with LLM failed"
 
-    # ax[1].plot(test_df['booked_units'], color='black', label = 'Norjhbkmbmnbmal', linewidth=1.5)
-    # ax[1].scatter(a.index ,a['booked_units'], color='red', label = 'Anomaly', s=16)
+            print(op)
+        else:
+            op = []
+            status_code = 200
+            status_msg = "No anomalies found by AI model"
 
-    # ax[2].plot(test_df['shipped_revenue'], color='black', label = 'Normal', linewidth=1.5)
-    # ax[2].scatter(a.index ,a['shipped_revenue'], color='red', label = 'Anomaly', s=16)
+        # fig, ax = plt.subplots(10, figsize=(10,6), sharex=True)
 
-    # ax[3].plot(test_df['cancel_revenue'], color='black', label = 'Normal', linewidth=1.5)
-    # ax[3].scatter(a.index ,a['cancel_revenue'], color='red', label = 'Anomaly', s=16)
+        # #anomaly
+        # a = test_df.loc[y_pred_test == 1]
+        # outlier_index=list(a.index)
 
-    # ax[4].plot(test_df['shipped_margin'], color='black', label = 'Normal', linewidth=1.5)
-    # ax[4].scatter(a.index ,a['shipped_margin'], color='red', label = 'Anomaly', s=16)
+        # ax[0].plot(test_df['booked_revenue'], color='black', label = 'ghfjgvgv', linewidth=1.5)
+        # ax[0].scatter(a.index ,a['booked_revenue'], color='red', label = 'Anomaly', s=16)
 
-    # ax[5].plot(test_df['shipped_units'], color='black', label = 'Normal', linewidth=1.5)
-    # ax[5].scatter(a.index ,a['shipped_units'], color='red', label = 'Anomaly', s=16)
+        # ax[1].plot(test_df['booked_units'], color='black', label = 'Norjhbkmbmnbmal', linewidth=1.5)
+        # ax[1].scatter(a.index ,a['booked_units'], color='red', label = 'Anomaly', s=16)
 
-    # ax[6].plot(test_df['cancel_units'], color='black', label = 'Normal', linewidth=1.5)
-    # ax[6].scatter(a.index ,a['cancel_units'], color='red', label = 'Anomaly', s=16)
+        # ax[2].plot(test_df['shipped_revenue'], color='black', label = 'Normal', linewidth=1.5)
+        # ax[2].scatter(a.index ,a['shipped_revenue'], color='red', label = 'Anomaly', s=16)
 
-    # ax[7].plot(test_df['return_units'], color='black', label = 'Normal', linewidth=1.5)
-    # ax[7].scatter(a.index ,a['return_units'], color='red', label = 'Anomaly', s=16)
+        # ax[3].plot(test_df['cancel_revenue'], color='black', label = 'Normal', linewidth=1.5)
+        # ax[3].scatter(a.index ,a['cancel_revenue'], color='red', label = 'Anomaly', s=16)
 
-    # ax[8].plot(test_df['visits'], color='black', label = 'Normal', linewidth=1.5)
-    # ax[8].scatter(a.index ,a['visits'], color='red', label = 'Anomaly', s=16)
+        # ax[4].plot(test_df['shipped_margin'], color='black', label = 'Normal', linewidth=1.5)
+        # ax[4].scatter(a.index ,a['shipped_margin'], color='red', label = 'Anomaly', s=16)
 
-    # ax[9].plot(test_df['Anomaly_score'], color='black', label = 'Normal', linewidth=1.5)
-    # ax[9].scatter(a.index ,a['Anomaly_score'], color='red', label = 'Anomaly', s=16)
+        # ax[5].plot(test_df['shipped_units'], color='black', label = 'Normal', linewidth=1.5)
+        # ax[5].scatter(a.index ,a['shipped_units'], color='red', label = 'Anomaly', s=16)
+
+        # ax[6].plot(test_df['cancel_units'], color='black', label = 'Normal', linewidth=1.5)
+        # ax[6].scatter(a.index ,a['cancel_units'], color='red', label = 'Anomaly', s=16)
+
+        # ax[7].plot(test_df['return_units'], color='black', label = 'Normal', linewidth=1.5)
+        # ax[7].scatter(a.index ,a['return_units'], color='red', label = 'Anomaly', s=16)
+
+        # ax[8].plot(test_df['visits'], color='black', label = 'Normal', linewidth=1.5)
+        # ax[8].scatter(a.index ,a['visits'], color='red', label = 'Anomaly', s=16)
+
+        # ax[9].plot(test_df['Anomaly_score'], color='black', label = 'Normal', linewidth=1.5)
+        # ax[9].scatter(a.index ,a['Anomaly_score'], color='red', label = 'Anomaly', s=16)
+        
+        # #ax.plot(pd.Series(prediction_score_DL.flatten()*10), color='blue', label = 'Score', linewidth=0.5)
+
+        # plt.legend()
+        # #plt.title("Anamoly Detection Using ECOD model")
+        # plt.xlabel('Date')
+        # #plt.ylabel('booked_revenue')
+        # plt.show()
+
+        response = prepare_test_json(test_df, op, kpi_cols)
+
+        response_dict = {"status_code":status_code, "status_msg":status_msg, "data":response, "error":""}
     
-    # #ax.plot(pd.Series(prediction_score_DL.flatten()*10), color='blue', label = 'Score', linewidth=0.5)
-
-    # plt.legend()
-    # #plt.title("Anamoly Detection Using ECOD model")
-    # plt.xlabel('Date')
-    # #plt.ylabel('booked_revenue')
-    # plt.show()
-
-
-    #return test_df.to_json(orient="records")
-    return prepare_test_json(test_df, op)
+    except Exception as e:
+        Logger.error(traceback.format_exc())
+        response = []
+        status_code = 500
+        status_msg = "application run failed"
+        response_dict = {"status_code":status_code, "status_msg":status_msg, "data":response, "error":str(traceback.format_exc())}
+    
+    return response_dict
 

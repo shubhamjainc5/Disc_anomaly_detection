@@ -26,18 +26,20 @@ from openai.error import APIError, Timeout, RateLimitError, APIConnectionError, 
 
 from langchain.llms import AzureOpenAI
 from langchain.chat_models import AzureChatOpenAI
-from langchain import PromptTemplate, LLMChain
-from langchain.chains import SequentialChain, TransformChain
-from langchain.memory import SimpleMemory
+from langchain.prompts import PromptTemplate
+from langchain.chains import LLMChain
+# from langchain.chains import SequentialChain, TransformChain
+# from langchain.memory import SimpleMemory
 from langchain.prompts.chat import (
     ChatPromptTemplate,
     SystemMessagePromptTemplate,
     AIMessagePromptTemplate,
     HumanMessagePromptTemplate,
 )
+from langchain.cache import SQLiteCache
+from langchain import globals
 
-from langchain.output_parsers import CommaSeparatedListOutputParser
-from langchain.output_parsers import PydanticOutputParser, OutputFixingParser, RetryWithErrorOutputParser
+from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field, validator
 from typing import List
 
@@ -48,6 +50,10 @@ from prompt import  reasoning_sys_prompt, reasoning_prompt
 
 with open("config.json", "r") as f:
     domain_config = json.load(f)["openai_cred"]
+
+
+# Set llm_cache
+globals.set_llm_cache(SQLiteCache(database_path="cache.db"))
 
 
 os.environ["OPENAI_API_TYPE"] = domain_config['OPENAI_API_TYPE']
@@ -68,7 +74,7 @@ class AnomalyReasoningPlainText(BaseModel):
     AnomalyReasoning: List[Reasoning] = Field(description="a set of anomalous points with their date and it's casual reasoning in dictionary format")
 
 
-def generate_reasoning(table_data:str, anomaly_dates:List) -> (List[Dict[str,str]], int, float):
+def generate_reasoning(table_data:str, anomaly_dates:List, use_cache:bool) -> (List[Dict[str,str]], int, float):
     print('\n---------Casual Reasoning-------------\n')
 
     cnt = 0
@@ -84,7 +90,8 @@ def generate_reasoning(table_data:str, anomaly_dates:List) -> (List[Dict[str,str
             max_tokens=1000,
             temperature=0.5,
             verbose=True,
-            request_timeout=60
+            request_timeout=60,
+            cache= use_cache
         )
 
         system_message_prompt = SystemMessagePromptTemplate.from_template(reasoning_sys_prompt)
@@ -96,7 +103,7 @@ def generate_reasoning(table_data:str, anomaly_dates:List) -> (List[Dict[str,str
                                         partial_variables={"format_instructions": reason_format_instructions})
         
         reason_prompt = reason_template.format(table_data=table_data, anomaly_dates= str(anomaly_dates), format_instructions = reason_format_instructions)
-        # print(reason_prompt)
+        print(reason_prompt)
 
         human_message_prompt = HumanMessagePromptTemplate(prompt=reason_template)
 
@@ -176,4 +183,4 @@ def generate_reasoning(table_data:str, anomaly_dates:List) -> (List[Dict[str,str
     print('\n---------reason:{0}-------------\n'.format(status))
     Logger.info(f"\n---------reason:{status}-------------\n")
 
-    return result, cnt, 0 if len(call_tokens) == 0 else np.average(call_tokens)
+    return result, cnt, 0 if len(call_tokens) == 0 else np.average(call_tokens), status

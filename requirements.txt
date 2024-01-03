@@ -4,6 +4,6 @@ pyod==1.1.2
 psycopg2_binary==2.9.9
 fastapi==0.97.0
 uvicorn[standard]==0.22.0
-langchain==0.0.229
+langchain==0.0.352
 openai==0.27.6
 tiktoken==0.4.0

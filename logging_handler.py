@@ -6,6 +6,8 @@ logging.basicConfig(filename='app.log',
                     filemode='a',
     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s', level=logging.DEBUG)
 
+numba_logger = logging.getLogger('numba')
+numba_logger.setLevel(logging.WARNING)
 
 class Logger():
     """class def handling logs."""
