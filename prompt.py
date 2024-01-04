@@ -5,7 +5,7 @@ reasoning_prompt = """
 Below I am providing you table data in comma seperated format :
 {table_data}
 
-Above table contains data for different KPIs along with their wow(week on week) percentage change( indicating increase or decrease) of respective kpis.
+Above table contains data for different KPIs wow(week on week) percentage change( indicating increase/spike/rise or decrease/drop) of respective kpis.
 
 the anomalous points detected in above table data occurs at below dates, your analysis and reasoning should strictly be done at below dates only.
 {anomaly_dates}
@@ -13,15 +13,16 @@ the anomalous points detected in above table data occurs at below dates, your an
 here is just an example to show how the casual reasoning for anomalous points should look like:
 '''
 "AnomalyReasoning":[
-
+Dict(
 "anomaly_date":"2021-12-13",
 "reason": "The week starting from (2021-12-13) saw a spike of 17% in shipped revenue compared to previous weeks. This could be due to the holiday season where people tend to buy more. The return units also saw significant increase of 5%, which could be due to more purchases leading to more returns.",
 "reason_html": "The week starting from (<span style='font-weight:bold;'>2021-12-13</span>) saw a spike of <span style='color:green;font-weight:bold;'>17</span>% in <span style='font-weight:bold;'>Shipped Revenue</span> compared to previous weeks. This could be due to the holiday season where people tend to buy more. The <span style='font-weight:bold;'>Return units</span> also saw significant increase of <span style='color:green;font-weight:bold;'>5</span>%, which could be due to more purchases leading to more returns."
-
+),
+Dict(
 "anomaly_date":"2021-11-29",
 "reason": "The week starting with (2021-11-29) saw a 11% rise in booked revenue compared to 7% rise of previous week. This could be due to the continued effect of the sales events in the previous week. The shipped units also saw a significant jump of 9% as compared to previous week, indicating more products were sold and shipped.",
 "reason_html": "The week starting with (<span style='font-weight:bold;'>2021-11-29</span>) saw a <span style='color:green;font-weight:bold;'>11</span>% rise in <span style='font-weight:bold;'>Booked Revenue</span> compared to <span style='color:green;font-weight:bold;'>7</span>% rise of previous week. This could be due to the continued effect of the sales events in the previous week. The <span style='font-weight:bold;'>Shipped Units</span> also saw a significant jump of <span style='color:green;font-weight:bold;'>9</span>% as compared to previous week, indicating more products were sold and shipped."
-
+)
             ]
 '''
 

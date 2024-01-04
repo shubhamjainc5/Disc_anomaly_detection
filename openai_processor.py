@@ -87,10 +87,10 @@ def generate_reasoning(table_data:str, anomaly_dates:List, use_cache:bool) -> (L
         model = AzureChatOpenAI(
             deployment_name=domain_config['AZURE_DEPLOYMENT_NAME'],
             model_name=domain_config['AZURE_MODEL_NAME'],
-            max_tokens=1000,
+            max_tokens=2000,
             temperature=0.5,
             verbose=True,
-            request_timeout=60,
+            request_timeout=20,
             cache= use_cache
         )
 
@@ -103,7 +103,7 @@ def generate_reasoning(table_data:str, anomaly_dates:List, use_cache:bool) -> (L
                                         partial_variables={"format_instructions": reason_format_instructions})
         
         reason_prompt = reason_template.format(table_data=table_data, anomaly_dates= str(anomaly_dates), format_instructions = reason_format_instructions)
-        print(reason_prompt)
+        # print(reason_prompt)
 
         human_message_prompt = HumanMessagePromptTemplate(prompt=reason_template)
 

@@ -196,24 +196,27 @@ def inference_model_result(requestId : str, kpi_cols:list, use_cache:bool):
         anomaly_dates = list(test_df[y_pred_test==1]['week_start'])
 
         if len(anomaly_dates)>0:
-            op ,api_cnt, api_tokens, llm_status = generate_reasoning(narrative_vars.to_csv(), anomaly_dates, use_cache)
+            #filt_narrative_vars = copy.deepcopy(narrative_vars)
+            remove_kpi_cols = ["week_start"]+ [ col for col in narrative_vars.columns if "wow" in col ] 
+            filt_narrative_vars = narrative_vars[y_pred_test==1][remove_kpi_cols]
+            op ,api_cnt, api_tokens, llm_status = generate_reasoning(filt_narrative_vars.to_csv(), anomaly_dates, use_cache)
             Logger.info(f"{api_cnt} API Calls were made with an average of {api_tokens} tokens per call for narrative generation")
 
             if llm_status in ["LLMParsed","LLMRetryParsed"]:
                 status_code = 200
                 status_msg = "Successfully generated the narrative for the predicted anomalies"
-            elif llm_status in ["LLMServerError"]:
+            elif llm_status in ["LLMServerError","UnknownError"]:
                 status_code = 300
                 status_msg = "LLM Server not responding"
             else:
-                status_code = 300
-                status_msg = "Application Server connection with LLM failed"
+                status_code = 500
+                status_msg = "Anomaly service server failed"
 
             print(op)
         else:
             op = []
             status_code = 200
-            status_msg = "No anomalies found by AI model"
+            status_msg = "there are no anomalies present in anomaly table"
 
         # fig, ax = plt.subplots(10, figsize=(10,6), sharex=True)
 
@@ -267,7 +270,7 @@ def inference_model_result(requestId : str, kpi_cols:list, use_cache:bool):
         Logger.error(traceback.format_exc())
         response = []
         status_code = 500
-        status_msg = "application run failed"
+        status_msg = "Anomaly service server failed"
         response_dict = {"status_code":status_code, "status_msg":status_msg, "data":response, "error":str(traceback.format_exc())}
     
     return response_dict

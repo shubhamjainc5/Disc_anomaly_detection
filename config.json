@@ -10,8 +10,8 @@
                 },
     "openai_cred":{
 
-    "AZURE_DEPLOYMENT_NAME" : "gpt-4-prod",
-    "AZURE_MODEL_NAME" : "gpt-4",
+    "AZURE_DEPLOYMENT_NAME" : "gpt-35-turbo-prod",
+    "AZURE_MODEL_NAME" : "gpt-35-turbo",
     "OPENAI_API_TYPE" : "azure",
     "OPENAI_API_VERSION" : "2023-07-01-preview",
     "OPENAI_API_BASE" : "https://c5-openai-discovery.openai.azure.com/",
