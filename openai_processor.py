@@ -147,6 +147,7 @@ def generate_reasoning(table_data:str, anomaly_dates:List, use_cache:bool) -> (L
         Logger.error(traceback.format_exc())
         Logger.error('ERROR: reason Parsing or Assertion Failed')
         try:
+            globals.get_llm_cache().clear()
             result = reason_llm_call()
             status = 'LLMRetryParsed'
         except (APIError, Timeout, ServiceUnavailableError) as e1:
@@ -154,31 +155,37 @@ def generate_reasoning(table_data:str, anomaly_dates:List, use_cache:bool) -> (L
             Logger.error('ERROR: LLM SERVER Not responding')
             result = []
             status = 'LLMServerError'
+            globals.get_llm_cache().clear()
         except (RateLimitError, APIConnectionError, InvalidRequestError, AuthenticationError) as e3:
             Logger.error(traceback.format_exc())
             Logger.error('ERROR: Application server Not responding')
             result = []
             status = 'AppServerError'
+            globals.get_llm_cache().clear()
         except:
             Logger.error(traceback.format_exc())
             Logger.error('UNKNOWN ERROR: occurred')
             result = []
             status = 'UnknownError'
+            globals.get_llm_cache().clear()
     except (APIError, Timeout, ServiceUnavailableError) as e1:
         Logger.error(traceback.format_exc())
         Logger.error('ERROR: LLM SERVER Not responding')
         result = []
         status = 'LLMServerError'
+        globals.get_llm_cache().clear()
     except (RateLimitError, APIConnectionError, InvalidRequestError, AuthenticationError) as e3:
         Logger.error(traceback.format_exc())
         Logger.error('ERROR: Application server Not responding')
         result = []
         status = 'AppServerError'
+        globals.get_llm_cache().clear()
     except:
         Logger.error(traceback.format_exc())
         Logger.error('UNKNOWN ERROR: occurred')
         result = []
         status = 'UnknownError'
+        globals.get_llm_cache().clear()
 
     print('\n---------reason:{0}-------------\n'.format(status))
     Logger.info(f"\n---------reason:{status}-------------\n")

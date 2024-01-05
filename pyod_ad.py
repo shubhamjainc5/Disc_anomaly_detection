@@ -130,6 +130,44 @@ def _execute_sql_query(sql_db, sql_query):
 
 sql_db = SQLDataBase(DB_CREDS)
 
+def plot_charts(test_df, kpi_cols, y_pred_test):
+        
+        test_df = copy.deepcopy(test_df)
+        test_df['week_start'] = pd.to_datetime(test_df['week_start'])
+
+
+        fig, ax = plt.subplots(len(kpi_cols)+1, figsize=(10,6), sharex=True)
+
+        #anomaly
+        a = test_df.loc[y_pred_test == 1]
+        outlier_index=list(a.index)
+
+        for i in range(len(kpi_cols)):
+
+            ax[i].plot(test_df['week_start'],test_df[kpi_cols[i]], color='green', linewidth=1.5, 
+                       #marker='o'
+                       )
+            ax[i].scatter(a['week_start'] ,a[kpi_cols[i]], color='red', label = 'Anomaly', s=30, marker='o')
+            ax[i].set_title(kpi_cols[i])
+            ax[i].grid(True)
+
+        ax[i+1].plot(test_df['week_start'],test_df['Anomaly_score'], color='green', label = 'Normal', linewidth=1.5, 
+                     #marker='o'
+                     )
+        ax[i+1].scatter(a['week_start'] ,a['Anomaly_score'], color='red', label = 'Anomaly', s=30, marker='o')
+        ax[i+1].set_title('Anomaly_score')
+        ax[i+1].grid(True)
+        
+        #ax.plot(pd.Series(prediction_score_DL.flatten()*10), color='blue', label = 'Score', linewidth=0.5)
+
+        plt.legend()
+        #plt.ylabel('booked_revenue')
+        #plt.show()
+        fig.savefig('multivariate_anomaly.png')
+        
+
+
+
 
 def inference_model_result(requestId : str, kpi_cols:list, use_cache:bool):
 
@@ -213,54 +251,11 @@ def inference_model_result(requestId : str, kpi_cols:list, use_cache:bool):
                 status_msg = "Anomaly service server failed"
 
             print(op)
+            #plot_charts(test_df, kpi_cols, y_pred_test)
         else:
             op = []
             status_code = 200
             status_msg = "there are no anomalies present in anomaly table"
-
-        # fig, ax = plt.subplots(10, figsize=(10,6), sharex=True)
-
-        # #anomaly
-        # a = test_df.loc[y_pred_test == 1]
-        # outlier_index=list(a.index)
-
-        # ax[0].plot(test_df['booked_revenue'], color='black', label = 'ghfjgvgv', linewidth=1.5)
-        # ax[0].scatter(a.index ,a['booked_revenue'], color='red', label = 'Anomaly', s=16)
-
-        # ax[1].plot(test_df['booked_units'], color='black', label = 'Norjhbkmbmnbmal', linewidth=1.5)
-        # ax[1].scatter(a.index ,a['booked_units'], color='red', label = 'Anomaly', s=16)
-
-        # ax[2].plot(test_df['shipped_revenue'], color='black', label = 'Normal', linewidth=1.5)
-        # ax[2].scatter(a.index ,a['shipped_revenue'], color='red', label = 'Anomaly', s=16)
-
-        # ax[3].plot(test_df['cancel_revenue'], color='black', label = 'Normal', linewidth=1.5)
-        # ax[3].scatter(a.index ,a['cancel_revenue'], color='red', label = 'Anomaly', s=16)
-
-        # ax[4].plot(test_df['shipped_margin'], color='black', label = 'Normal', linewidth=1.5)
-        # ax[4].scatter(a.index ,a['shipped_margin'], color='red', label = 'Anomaly', s=16)
-
-        # ax[5].plot(test_df['shipped_units'], color='black', label = 'Normal', linewidth=1.5)
-        # ax[5].scatter(a.index ,a['shipped_units'], color='red', label = 'Anomaly', s=16)
-
-        # ax[6].plot(test_df['cancel_units'], color='black', label = 'Normal', linewidth=1.5)
-        # ax[6].scatter(a.index ,a['cancel_units'], color='red', label = 'Anomaly', s=16)
-
-        # ax[7].plot(test_df['return_units'], color='black', label = 'Normal', linewidth=1.5)
-        # ax[7].scatter(a.index ,a['return_units'], color='red', label = 'Anomaly', s=16)
-
-        # ax[8].plot(test_df['visits'], color='black', label = 'Normal', linewidth=1.5)
-        # ax[8].scatter(a.index ,a['visits'], color='red', label = 'Anomaly', s=16)
-
-        # ax[9].plot(test_df['Anomaly_score'], color='black', label = 'Normal', linewidth=1.5)
-        # ax[9].scatter(a.index ,a['Anomaly_score'], color='red', label = 'Anomaly', s=16)
-        
-        # #ax.plot(pd.Series(prediction_score_DL.flatten()*10), color='blue', label = 'Score', linewidth=0.5)
-
-        # plt.legend()
-        # #plt.title("Anamoly Detection Using ECOD model")
-        # plt.xlabel('Date')
-        # #plt.ylabel('booked_revenue')
-        # plt.show()
 
         response = prepare_test_json(test_df, op, kpi_cols)
 
