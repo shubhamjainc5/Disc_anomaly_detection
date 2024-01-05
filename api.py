@@ -46,4 +46,4 @@ async def create_place_view(input: Summary):
     return result
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=9702)
+    uvicorn.run(app, host="0.0.0.0", port=9704)
