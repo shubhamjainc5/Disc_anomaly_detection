@@ -55,7 +55,7 @@ async def create_early_warning(input: Summary):
 
     start_time = time.time()
     Logger.info("Received a request {0} for early warning service with cache = {1}".format(requestId, use_cache))
-    sel_kpi = "shipped_revenue"
+    sel_kpi = input.persona_config['persona_defaults']['metric'][0]['col_name']
     result = run_early_warning(requestId, sel_kpi, use_cache)
     end_time = time.time()
     Logger.info("request {} for early warning service with cache = {} took {:.4f} seconds".format(requestId, use_cache, end_time - start_time))
