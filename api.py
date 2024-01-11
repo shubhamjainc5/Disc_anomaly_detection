@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, List
 from pyod_ad import inference_model_result
+from early_warning_service import run_early_warning
 import uvicorn
 from logging_handler import Logger
 import time
@@ -30,7 +31,7 @@ app.add_middleware(
 
 
 @app.post('/AnomalyDetect')
-async def create_place_view(input: Summary):
+async def create_deep_dive(input: Summary):
 
     requestId = input.sender
     use_cache = True
@@ -41,6 +42,23 @@ async def create_place_view(input: Summary):
     result = inference_model_result(requestId, kpi_cols, use_cache)
     end_time = time.time()
     Logger.info("request {} for Anomaly Deep-dive service with cache = {} took {:.4f} seconds".format(requestId, use_cache, end_time - start_time))
+    
+
+    return result
+
+
+@app.post('/EarlyWarning')
+async def create_early_warning(input: Summary):
+
+    requestId = input.sender
+    use_cache = True
+
+    start_time = time.time()
+    Logger.info("Received a request {0} for early warning service with cache = {1}".format(requestId, use_cache))
+    sel_kpi = input.persona_config['persona_defaults']['metric'][0]['col_name']
+    result = run_early_warning(requestId, sel_kpi, use_cache)
+    end_time = time.time()
+    Logger.info("request {} for early warning service with cache = {} took {:.4f} seconds".format(requestId, use_cache, end_time - start_time))
     
 
     return result
