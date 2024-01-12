@@ -17,6 +17,7 @@ from pyod.utils.data import evaluate_print
 from pyod.utils.example import visualize
 
 from openai_processor_earlywarning import generate_ew_narrative
+from numerize import numerize
 from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing, Holt
 
 from joblib import dump, load
@@ -75,16 +76,16 @@ def prepare_earlywarning_json(test_df, llm_op, sel_kpi):
         narr_html = '' if match_idx==-1 else llm_op[match_idx]['narrative_html']
 
         dict_row = {
-            "week_start":row["week_start"],
+            "refreshDate":row["week_start"],
             "kpi": sel_kpi,
             "value": int(row[sel_kpi]),
-            "avg_value": int(row['avg_'+sel_kpi]),
-            "lower_threshold": int(row['lb_'+sel_kpi]),
-            "upper_threshold": int(row['ub_'+sel_kpi]),
+            "smaBound": int(row['avg_'+sel_kpi]),
+            "lowerBound": int(row['lb_'+sel_kpi]),
+            "upperBound": int(row['ub_'+sel_kpi]),
             "narrative":narr,
             "narrativeHtml":narr_html,
-            "Forecasted":row["Forecasted"],
-            "forecast_anomaly":row["forecast_anomaly"],
+            "isForecasted":row["Forecasted"],
+            "isEarlyWarning":row["forecast_anomaly"],
         }
 
         rows_list.append(dict_row)
@@ -148,6 +149,8 @@ def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool):
         if len(anomaly_dates)>0:
 
             filt_narrative_vars = final_df[final_df['forecast_anomaly']==True][['week_start',sel_kpi,'avg_'+sel_kpi,'diff_avg_perc']]
+            filt_narrative_vars[sel_kpi] = filt_narrative_vars[sel_kpi].apply(lambda x : '$'+numerize.numerize(x,2))
+            filt_narrative_vars['avg_'+sel_kpi] = filt_narrative_vars['avg_'+sel_kpi].apply(lambda x : '$'+numerize.numerize(x,2))
             op ,api_cnt, api_tokens, llm_status = generate_ew_narrative(filt_narrative_vars.to_csv(), anomaly_dates, use_cache)
             Logger.info(f"{api_cnt} API Calls were made with an average of {api_tokens} tokens per call for narrative generation")
 

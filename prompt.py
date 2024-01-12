@@ -43,21 +43,21 @@ Please make sure you always abide by the following rules to create reasoning in 
 Output JSON:
 """
 
-forecasting_sys_prompt = """Given a time series table data of product sales, your job is to create a narrative for the given data."""
+forecasting_sys_prompt = """Given a time series forcasted table data of product sales, your job is to create a narrative for the given data."""
 
 forecasting_prompt = """
-Below I am providing you table data in comma seperated format :
+Below I am providing you forecasted table data in comma seperated format :
 {table_data}
 
-Above table contains data for a KPI, KPI's moving window average  and the percentage of difference between kpi's actual value and kpi's moving window average value.
+Above table contains future data for a KPI, KPI's moving window average  and the percentage of difference between kpi's actual value and kpi's moving window average value.
 
 here is just an example to show how the narrative for anomalous points should look like:
 '''
 "ForecastNarrative":[
 Dict(
 "anomaly_date":"2021-12-13",
-"narrative": "The shipped revenue is expected to (drop) by -14.04% below the average during the week starting (2021-12-13). Its predicted value for that week is 91959.359. Please take required remedial actions.",
-"narrative_html": "The <span style='font-weight:bold;'>Shipped Revenue</span> is expected to (<span style='font-weight:bold;'>drop</span>) by <span style='color:red;font-weight:bold;'>14.04</span>% below the average during the week starting (<span style='font-weight:bold;'>2021-12-13</span>). Its predicted value for that week is <span style='font-weight:bold;'>91959.359</span> . Please take required remedial actions."
+"narrative": "The shipped revenue is expected to (drop) by -14.04% below the average during the week starting (2021-12-13). Its predicted value for that week is $19.2M. Please take required remedial actions.",
+"narrative_html": "The <span style='font-weight:bold;'>Shipped Revenue</span> is expected to (<span style='font-weight:bold;'>drop</span>) by <span style='color:red;font-weight:bold;'>14.04</span>% below the average during the week starting (<span style='font-weight:bold;'>2021-12-13</span>). Its predicted value for that week is <span style='font-weight:bold;'>$19.2M</span> . Please take required remedial actions."
 )
             ]
 '''
