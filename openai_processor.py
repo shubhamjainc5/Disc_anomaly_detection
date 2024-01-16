@@ -99,10 +99,10 @@ def generate_reasoning(table_data:str, anomaly_dates:List, use_cache:bool) -> (L
         reason_parser = PydanticOutputParser(pydantic_object=AnomalyReasoningPlainText)
         reason_format_instructions = reason_parser.get_format_instructions()
 
-        reason_template = PromptTemplate(input_variables=["table_data","anomaly_dates"], template=reasoning_prompt,
+        reason_template = PromptTemplate(input_variables=["table_data"], template=reasoning_prompt,
                                         partial_variables={"format_instructions": reason_format_instructions})
         
-        reason_prompt = reason_template.format(table_data=table_data, anomaly_dates= str(anomaly_dates), format_instructions = reason_format_instructions)
+        reason_prompt = reason_template.format(table_data=table_data, format_instructions = reason_format_instructions)
         # print(reason_prompt)
 
         human_message_prompt = HumanMessagePromptTemplate(prompt=reason_template)
@@ -111,7 +111,7 @@ def generate_reasoning(table_data:str, anomaly_dates:List, use_cache:bool) -> (L
 
         reason_chain = LLMChain(llm=model, prompt=chat_prompt, output_key="generated_reasoning")
 
-        gpt_op = reason_chain({"table_data": table_data, "anomaly_dates": str(anomaly_dates)})
+        gpt_op = reason_chain({"table_data": table_data})
         Logger.info("\n Response from GPT : {0}".format(gpt_op))
 
         generated_reasons = gpt_op['generated_reasoning']
