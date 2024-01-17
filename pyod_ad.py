@@ -68,6 +68,7 @@ def prepare_test_json(test_df, llm_op, kpi_cols):
             value_dict[col]['upperBound']= row['ub_'+col]
             value_dict[col]['lowerBound']= row['lb_'+col]
             value_dict[col]['smaBound']= row['avg_'+col]
+            value_dict[col]['local_anomaly'] = 1 if (row[col] > row['ub_'+col]) | (row[col] < row['lb_'+col]) else 0
 
         match_idx = llm_anomaly_dt.index(row["week_start"]) if row["week_start"] in llm_anomaly_dt else -1
         narr = '' if match_idx==-1 else llm_op[match_idx]['reason']
@@ -184,13 +185,14 @@ def inference_model_result(requestId : str, kpi_cols:list, use_cache:bool):
         narrative_df = copy.deepcopy(merged_df)
         narrative_vars = add_wow_vars(narrative_df, kpi_cols)
 
-        window_num = 12
+        window_num = 6
+        tol = 0.8
         for col in kpi_cols:
             avg_kpi = merged_df[col].rolling(window=window_num).mean().dropna()
             dev_kpi = merged_df[col].rolling(window=window_num).std().dropna()
             merged_df['avg_'+col] = avg_kpi
-            merged_df['ub_'+col] = avg_kpi + dev_kpi
-            merged_df['lb_'+col] = avg_kpi - dev_kpi
+            merged_df['ub_'+col] = avg_kpi + tol*dev_kpi
+            merged_df['lb_'+col] = avg_kpi - tol*dev_kpi
             merged_df['dev_'+col] = dev_kpi
 
         input_df = copy.deepcopy(merged_df)

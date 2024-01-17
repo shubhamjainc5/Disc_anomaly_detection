@@ -1,0 +1,109 @@
+{
+    "metadata": {},
+    "sender": "1f23a2b7-97e3-4cfe-b6e0-1f0af3ca2d51",
+    "persona_id": "528755f6-3d89-11ee-be56-0242ac120002",
+    "persona_config": {
+      "persona_description": "Persona of Head of Ecommerce Sales all over",
+      "persona_metrics": [
+        {
+          "col_val": [],
+          "col_name": "cancel_revenue"
+        },
+        {
+          "col_val": [],
+          "col_name": "shipped_revenue"
+        },
+        {
+          "col_val": [],
+          "col_name": "shipped_margin"
+        },
+        {
+          "col_val": [],
+          "col_name": "visits"
+        }
+      ],
+      "persona_dimensions": [
+        {
+          "col_val": [
+            "Web"
+          ],
+          "col_name": "medium"
+        },
+        {
+          "col_val": [
+            "Chile",
+            "Mexico"
+          ],
+          "col_name": "country"
+        },
+        {
+          "col_val": [
+            "LAS / BR"
+          ],
+          "col_name": "region"
+        },
+        {
+          "col_val": [],
+          "col_name": "market"
+        },
+        {
+          "col_val": [],
+          "col_name": "program"
+        },
+        {
+          "col_val": [],
+          "col_name": "route"
+        },
+        {
+          "col_val": [],
+          "col_name": "product_type"
+        }
+      ],
+      "persona_time_periods": [
+        {
+          "col_val": [
+            "last_week"
+          ],
+          "col_name": "week_start_date"
+        },
+        {
+          "col_val": [
+            "last_month"
+          ],
+          "col_name": "week_start_date"
+        },
+        {
+          "col_val": [
+            "last_quarter"
+          ],
+          "col_name": "week_start_date"
+        },
+        {
+          "col_val": [
+            "last_year"
+          ],
+          "col_name": "week_start_date"
+        }
+      ],
+      "persona_defaults": {
+        "metric": [
+          {
+            "col_val": [],
+            "col_name": "shipped_revenue"
+          }
+        ],
+        "dimension": [],
+        "time_period": [
+          {
+            "col_val": [
+              "last_week"
+            ],
+            "col_name": "week_start_date"
+          }
+        ]
+      },
+      "persona_title": "Head of Ecommerce Sales"
+    },
+    "message": "what are top 3 countries with highest revenue in 2023?",
+    "time_period": "last_week"
+  }
