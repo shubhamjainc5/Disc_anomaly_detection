@@ -19,10 +19,12 @@ from pyod.utils.example import visualize
 from openai_processor_earlywarning import generate_ew_narrative
 from numerize import numerize
 from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing, Holt
+from statsmodels.tsa.statespace.sarimax import SARIMAX 
 
 from joblib import dump, load
 import json
 import copy
+import time
 
 from database_connector import SQLDataBase
 from dateutil.relativedelta import relativedelta
@@ -97,7 +99,15 @@ def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool):
 
     try:
         sql_query = "SELECT * FROM spt_anomaly_data"
-        df, _ = _execute_sql_query(sql_db, sql_query)
+        df, fetch_flag = _execute_sql_query(sql_db, sql_query)
+
+        if fetch_flag==False:
+            AssertionError(f"Database connection failed.")
+        
+        if df.shape[0]==0 or df.shape[1]==0:
+            Logger.info("the number of observation in sql dataframe is".format(df.shape[0]))
+            Logger.info("the number of columns in sql dataframe are".format(str(df.columns)))
+            AssertionError(f"Enough Historical data not available in database table.")
 
         df = df[['week_start']+ [sel_kpi]]
 
@@ -109,9 +119,20 @@ def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool):
         current_period = 1
         forecast_period = 1
 
-        model_fit = Holt(merged_df).fit()
-        print(model_fit.model.params)
-        pred_values = model_fit.forecast(forecast_period*4)
+        p = domain_config["ew_model_config"][sel_kpi]["p"]
+        d = domain_config["ew_model_config"][sel_kpi]["d"]
+        q = domain_config["ew_model_config"][sel_kpi]["q"]
+        P = domain_config["ew_model_config"][sel_kpi]["P"]
+        D = domain_config["ew_model_config"][sel_kpi]["D"]
+        Q = domain_config["ew_model_config"][sel_kpi]["Q"]
+        m = domain_config["ew_model_config"][sel_kpi]["m"]
+
+        start_time = time.time()
+        results = SARIMAX(merged_df[sel_kpi],order=(p, d, q),seasonal_order=(P,D,Q,m)).fit()
+        # print(results.summary())
+        pred_values = results.forecast(forecast_period*4)
+        end_time = time.time()
+        Logger.info("model forecasting in early warning service took {:.4f} seconds".format(end_time - start_time))
         pred_values.name=sel_kpi
         pred_df = pred_values.reset_index().rename(columns={"index":"week_start"})
         merged_df['Forecasted'] = False

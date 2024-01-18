@@ -175,7 +175,15 @@ def inference_model_result(requestId : str, kpi_cols:list, use_cache:bool):
 
     try:
         sql_query = "SELECT * FROM spt_anomaly_data"
-        df, _ = _execute_sql_query(sql_db, sql_query)
+        df, fetch_flag = _execute_sql_query(sql_db, sql_query)
+
+        if fetch_flag==False:
+            AssertionError(f"Database connection failed.")
+        
+        if df.shape[0]==0 or df.shape[1]==0:
+            Logger.info("the number of observation in sql dataframe is".format(df.shape[0]))
+            Logger.info("the number of columns in sql dataframe are".format(str(df.columns)))
+            AssertionError(f"Enough Historical data not available in database table.")
 
         #apply columns filter
         df = df[['week_start']+ kpi_cols]

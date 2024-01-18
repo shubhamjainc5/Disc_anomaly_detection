@@ -16,5 +16,88 @@
     "OPENAI_API_VERSION" : "2023-07-01-preview",
     "OPENAI_API_BASE" : "https://c5-openai-discovery.openai.azure.com/",
     "OPEN_AI_API_KEY" : "e0c1590bbb5d46789f56be370a563f7a"
-    }
+    },
+    "ew_model_config":{
+        "booked_revenue":{
+            "p": 2,
+            "d": 1,
+            "q": 0,
+            "P": 1,
+            "D": 1,
+            "Q": 0,
+            "m": 52
+        },
+        "booked_units":{
+            "p": 0,
+            "d": 1,
+            "q": 2,
+            "P": 1,
+            "D": 1,
+            "Q": 0,
+            "m": 52
+        },
+        "shipped_revenue":{
+            "p": 0,
+            "d": 1,
+            "q": 1,
+            "P": 0,
+            "D": 1,
+            "Q": 1,
+            "m": 52
+        },
+        "cancel_revenue":{
+            "p": 0,
+            "d": 1,
+            "q": 0,
+            "P": 1,
+            "D": 1,
+            "Q": 0,
+            "m": 52
+        },
+        "shipped_margin":{
+            "p": 0,
+            "d": 1,
+            "q": 1,
+            "P": 0,
+            "D": 1,
+            "Q": 1,
+            "m": 52
+        },
+        "shipped_units":{
+            "p": 0,
+            "d": 0,
+            "q": 0,
+            "P": 0,
+            "D": 1,
+            "Q": 0,
+            "m": 52
+        },
+        "cancel_units":{
+            "p": 1,
+            "d": 0,
+            "q": 0,
+            "P": 2,
+            "D": 1,
+            "Q": 1,
+            "m": 52
+        },
+        "return_units":{
+            "p": 2,
+            "d": 1,
+            "q": 1,
+            "P": 1,
+            "D": 1,
+            "Q": 0,
+            "m": 52
+        },
+        "visits":{
+            "p": 0,
+            "d": 1,
+            "q": 1,
+            "P": 0,
+            "D": 1,
+            "Q": 2,
+            "m": 52
+        }
+        }
 }
