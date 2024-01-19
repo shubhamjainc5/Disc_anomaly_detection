@@ -124,8 +124,11 @@ def _execute_sql_query(sql_db, sql_query):
     try:
         df = sql_db.execute_sql(sql_query)
         df = df.dropna().reset_index(drop=True)
+        Logger.info("SQL to pandas dataframe successfull")
         return df, True
-    except Exception:
+    except Exception as e:
+        Logger.error(traceback.format_exc())
+        Logger.error("SQL to pandas dataframe failed")
         return None, False
 
 
@@ -273,6 +276,7 @@ def inference_model_result(requestId : str, kpi_cols:list, use_cache:bool):
     
     except Exception as e:
         Logger.error(traceback.format_exc())
+        # Logger.exception("Error",e)
         response = []
         status_code = 500
         status_msg = "Anomaly service server failed"

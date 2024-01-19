@@ -200,6 +200,7 @@ def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool):
     
     except Exception as e:
         Logger.error(traceback.format_exc())
+        # Logger.exception("Error",e)
         response = []
         status_code = 500
         status_msg = "Early warning service server failed"

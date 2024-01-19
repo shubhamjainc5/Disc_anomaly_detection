@@ -3,7 +3,7 @@ LOCAL ENVIRONMENT
 
 python api.py
 OR
-uvicorn app:app --host 0.0.0.0 --workers 1 --port 9704
+uvicorn api:app --host 0.0.0.0 --workers 1 --port 9704 --ssl-keyfile=certs/c5ailabs.com.key --ssl-certfile=certs/c5ailabs.com.crt
 
 docker build -t discovery_anomaly_model_dev .
 
