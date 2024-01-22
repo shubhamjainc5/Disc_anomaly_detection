@@ -15,7 +15,7 @@ from pyod.models.ecod import ECOD
 from pyod.utils.data import generate_data
 from pyod.utils.data import evaluate_print
 from pyod.utils.example import visualize
-
+from typing import Dict, List, Any
 from openai_processor_earlywarning import generate_ew_narrative
 from numerize import numerize
 from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing, Holt
@@ -33,7 +33,6 @@ import traceback
 with open("config.json", "r") as f:
     domain_config = json.load(f)
 
-DB_CREDS = domain_config["db_creds"]
 
 def merge_quarter_entries(df, kpi_cols):
     new_df = copy.deepcopy(df)
@@ -60,12 +59,13 @@ def _execute_sql_query(sql_db, sql_query):
     try:
         df = sql_db.execute_sql(sql_query)
         df = df.dropna().reset_index(drop=True)
+        Logger.info("SQL to pandas dataframe successfull")
         return df, True
-    except Exception:
+    except Exception as e:
+        Logger.error(traceback.format_exc())
+        Logger.error("SQL to pandas dataframe failed")
         return None, False
 
-
-sql_db = SQLDataBase(DB_CREDS)
 
 def prepare_earlywarning_json(test_df, llm_op, sel_kpi):
     test_df = copy.deepcopy(test_df)
@@ -94,20 +94,26 @@ def prepare_earlywarning_json(test_df, llm_op, sel_kpi):
     
     return rows_list
 
-def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool):
+def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool, sql_db:Any):
 
-
+    status_code = 0
+    status_msg= 'forecasting model failed'
     try:
+        
         sql_query = "SELECT * FROM spt_anomaly_data"
         df, fetch_flag = _execute_sql_query(sql_db, sql_query)
 
         if fetch_flag==False:
-            AssertionError(f"Database connection failed.")
-        
+            status_code = 100
+            status_msg = "Database connection failed."
+            raise AssertionError(f"Database connection failed.")
+    
         if df.shape[0]==0 or df.shape[1]==0:
             Logger.info("the number of observation in sql dataframe is".format(df.shape[0]))
             Logger.info("the number of columns in sql dataframe are".format(str(df.columns)))
-            AssertionError(f"Enough Historical data not available in database table.")
+            status_code = 100
+            status_msg = "Empty historical data in database table"
+            raise AssertionError(f"Empty historical data in database table")
 
         df = df[['week_start']+ [sel_kpi]]
 
@@ -202,8 +208,8 @@ def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool):
         Logger.error(traceback.format_exc())
         # Logger.exception("Error",e)
         response = []
-        status_code = 500
-        status_msg = "Early warning service server failed"
+        status_code = 500 if status_code==0 else status_code
+        status_msg = "Anomaly service server failed" if status_code==0 else status_msg
         response_dict = {"status_code":status_code, "status_msg":status_msg, "data":response, "error":str(traceback.format_exc())}
     
     return response_dict
