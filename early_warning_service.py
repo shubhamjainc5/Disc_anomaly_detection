@@ -15,13 +15,16 @@ from pyod.models.ecod import ECOD
 from pyod.utils.data import generate_data
 from pyod.utils.data import evaluate_print
 from pyod.utils.example import visualize
-
+from typing import Dict, List, Any
 from openai_processor_earlywarning import generate_ew_narrative
+from numerize import numerize
 from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing, Holt
+from statsmodels.tsa.statespace.sarimax import SARIMAX 
 
 from joblib import dump, load
 import json
 import copy
+import time
 
 from database_connector import SQLDataBase
 from dateutil.relativedelta import relativedelta
@@ -30,7 +33,6 @@ import traceback
 with open("config.json", "r") as f:
     domain_config = json.load(f)
 
-DB_CREDS = domain_config["db_creds"]
 
 def merge_quarter_entries(df, kpi_cols):
     new_df = copy.deepcopy(df)
@@ -57,12 +59,13 @@ def _execute_sql_query(sql_db, sql_query):
     try:
         df = sql_db.execute_sql(sql_query)
         df = df.dropna().reset_index(drop=True)
+        Logger.info("SQL to pandas dataframe successfull")
         return df, True
-    except Exception:
+    except Exception as e:
+        Logger.error(traceback.format_exc())
+        Logger.error("SQL to pandas dataframe failed")
         return None, False
 
-
-sql_db = SQLDataBase(DB_CREDS)
 
 def prepare_earlywarning_json(test_df, llm_op, sel_kpi):
     test_df = copy.deepcopy(test_df)
@@ -75,28 +78,42 @@ def prepare_earlywarning_json(test_df, llm_op, sel_kpi):
         narr_html = '' if match_idx==-1 else llm_op[match_idx]['narrative_html']
 
         dict_row = {
-            "week_start":row["week_start"],
+            "refreshDate":row["week_start"],
             "kpi": sel_kpi,
             "value": int(row[sel_kpi]),
-            "avg_value": int(row['avg_'+sel_kpi]),
-            "lower_threshold": int(row['lb_'+sel_kpi]),
-            "upper_threshold": int(row['ub_'+sel_kpi]),
+            "smaBound": int(row['avg_'+sel_kpi]),
+            "lowerBound": int(row['lb_'+sel_kpi]),
+            "upperBound": int(row['ub_'+sel_kpi]),
             "narrative":narr,
             "narrativeHtml":narr_html,
-            "Forecasted":row["Forecasted"],
-            "forecast_anomaly":row["forecast_anomaly"],
+            "isForecasted":row["Forecasted"],
+            "isEarlyWarning":row["forecast_anomaly"],
         }
 
         rows_list.append(dict_row)
     
     return rows_list
 
-def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool):
+def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool, sql_db:Any):
 
-
+    status_code = 0
+    status_msg= 'forecasting model failed'
     try:
+        
         sql_query = "SELECT * FROM spt_anomaly_data"
-        df, _ = _execute_sql_query(sql_db, sql_query)
+        df, fetch_flag = _execute_sql_query(sql_db, sql_query)
+
+        if fetch_flag==False:
+            status_code = 100
+            status_msg = "Database connection failed."
+            raise AssertionError(f"Database connection failed.")
+    
+        if df.shape[0]==0 or df.shape[1]==0:
+            Logger.info("the number of observation in sql dataframe is".format(df.shape[0]))
+            Logger.info("the number of columns in sql dataframe are".format(str(df.columns)))
+            status_code = 100
+            status_msg = "Empty historical data in database table"
+            raise AssertionError(f"Empty historical data in database table")
 
         df = df[['week_start']+ [sel_kpi]]
 
@@ -108,9 +125,20 @@ def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool):
         current_period = 1
         forecast_period = 1
 
-        model_fit = Holt(merged_df).fit()
-        print(model_fit.model.params)
-        pred_values = model_fit.forecast(forecast_period*4)
+        p = domain_config["ew_model_config"][sel_kpi]["p"]
+        d = domain_config["ew_model_config"][sel_kpi]["d"]
+        q = domain_config["ew_model_config"][sel_kpi]["q"]
+        P = domain_config["ew_model_config"][sel_kpi]["P"]
+        D = domain_config["ew_model_config"][sel_kpi]["D"]
+        Q = domain_config["ew_model_config"][sel_kpi]["Q"]
+        m = domain_config["ew_model_config"][sel_kpi]["m"]
+
+        start_time = time.time()
+        results = SARIMAX(merged_df[sel_kpi],order=(p, d, q),seasonal_order=(P,D,Q,m)).fit()
+        # print(results.summary())
+        pred_values = results.forecast(forecast_period*4)
+        end_time = time.time()
+        Logger.info("model forecasting in early warning service took {:.4f} seconds".format(end_time - start_time))
         pred_values.name=sel_kpi
         pred_df = pred_values.reset_index().rename(columns={"index":"week_start"})
         merged_df['Forecasted'] = False
@@ -148,6 +176,8 @@ def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool):
         if len(anomaly_dates)>0:
 
             filt_narrative_vars = final_df[final_df['forecast_anomaly']==True][['week_start',sel_kpi,'avg_'+sel_kpi,'diff_avg_perc']]
+            filt_narrative_vars[sel_kpi] = filt_narrative_vars[sel_kpi].apply(lambda x : '$'+numerize.numerize(x,2))
+            filt_narrative_vars['avg_'+sel_kpi] = filt_narrative_vars['avg_'+sel_kpi].apply(lambda x : '$'+numerize.numerize(x,2))
             op ,api_cnt, api_tokens, llm_status = generate_ew_narrative(filt_narrative_vars.to_csv(), anomaly_dates, use_cache)
             Logger.info(f"{api_cnt} API Calls were made with an average of {api_tokens} tokens per call for narrative generation")
 
@@ -176,9 +206,10 @@ def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool):
     
     except Exception as e:
         Logger.error(traceback.format_exc())
+        # Logger.exception("Error",e)
         response = []
-        status_code = 500
-        status_msg = "Early warning service server failed"
+        status_code = 500 if status_code==0 else status_code
+        status_msg = "Anomaly service server failed" if status_code==0 else status_msg
         response_dict = {"status_code":status_code, "status_msg":status_msg, "data":response, "error":str(traceback.format_exc())}
     
     return response_dict

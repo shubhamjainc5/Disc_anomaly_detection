@@ -10,7 +10,7 @@ RUN pip install --upgrade pip
 
 RUN pip install -r requirements.txt
 
-EXPOSE 9702
-ENV PORT 9702
+EXPOSE 9704
+ENV PORT 9704
 
-ENTRYPOINT ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "9702"]
+ENTRYPOINT ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "9704"]

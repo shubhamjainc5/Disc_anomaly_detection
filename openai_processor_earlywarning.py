@@ -10,6 +10,7 @@ import json
 import numpy as np
 import os
 import re
+import time
 import copy
 from logging_handler import Logger
 from langchain.schema import OutputParserException
@@ -111,14 +112,20 @@ def generate_ew_narrative(table_data:str,anomaly_dates:List, use_cache:bool) -> 
 
         reason_chain = LLMChain(llm=model, prompt=chat_prompt, output_key="generated_narrative")
 
+        start_time = time.time()
         gpt_op = reason_chain({"table_data": table_data})
         Logger.info("\n Response from GPT : {0}".format(gpt_op))
+        end_time = time.time()
+        Logger.info("LLM output took {:.4f} seconds".format(end_time - start_time))
 
         generated_reasons = gpt_op['generated_narrative']
         # print(generated_reasons)
 
+        start_time = time.time()
         reason_ip_tokens = model.get_num_tokens(reason_prompt)
         reason_op_tokens = model.get_num_tokens(generated_reasons)
+        end_time = time.time()
+        Logger.info("token calculation took {:.4f} seconds".format(end_time - start_time))
         call_tokens.append(reason_ip_tokens + reason_op_tokens)
         cnt += 1
 

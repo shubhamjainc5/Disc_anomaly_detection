@@ -30,13 +30,10 @@ class SQLDataBase:
             port=self.config["port"],
             database=self.config["database"]
         )
-        try:
-            engine = create_engine(url_object, connect_args={"options": "-c search_path={}".format(self.config["schema"])})
-            conn = engine.connect()
-            Logger.info("connection with database engine built")
-        except Exception as e:
-            Logger.error("connection with database engine failed")
-            Logger.error(traceback.format_exc())
+
+        engine = create_engine(url_object, connect_args={"options": "-c search_path={}".format(self.config["schema"])})
+        conn = engine.connect()
+        Logger.info("connection with database engine built")
 
         return engine, conn
     
@@ -69,14 +66,19 @@ class SQLDataBase:
             data = pd.read_sql_query(
                 sql_query,
                 self.conn)
-
+            self.conn.close()
+            Logger.info("Database connection has been closed")
             return data
         except SQLAlchemyError as e:
             """Format the error message"""
             Logger.error(f"SQLchaemy Error: {e}")
+            self.conn.close()
+            Logger.info("Database connection has been closed")
             return f"Error: {e}"
         except Exception as e1:
             Logger.error("Pandas read_sql_query failed")
+            self.conn.close()
+            Logger.info("Database connection has been closed")
             Logger.error(traceback.format_exc())
             return f"Error: {e1}"
 

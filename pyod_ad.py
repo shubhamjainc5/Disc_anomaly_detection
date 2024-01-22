@@ -27,8 +27,8 @@ from openai_processor import generate_reasoning
 from joblib import dump, load
 import json
 import copy
+from typing import Dict, List, Any
 
-from database_connector import SQLDataBase
 from dateutil.relativedelta import relativedelta
 import traceback
 
@@ -36,7 +36,7 @@ import traceback
 with open("config.json", "r") as f:
     domain_config = json.load(f)
 
-DB_CREDS = domain_config["db_creds"]
+
 
 def merge_quarter_entries(df, kpi_cols):
     new_df = copy.deepcopy(df)
@@ -68,6 +68,7 @@ def prepare_test_json(test_df, llm_op, kpi_cols):
             value_dict[col]['upperBound']= row['ub_'+col]
             value_dict[col]['lowerBound']= row['lb_'+col]
             value_dict[col]['smaBound']= row['avg_'+col]
+            value_dict[col]['local_anomaly'] = 1 if (row[col] > row['ub_'+col]) | (row[col] < row['lb_'+col]) else 0
 
         match_idx = llm_anomaly_dt.index(row["week_start"]) if row["week_start"] in llm_anomaly_dt else -1
         narr = '' if match_idx==-1 else llm_op[match_idx]['reason']
@@ -131,7 +132,6 @@ def _execute_sql_query(sql_db, sql_query):
         return None, False
 
 
-sql_db = SQLDataBase(DB_CREDS)
 
 def plot_charts(test_df, kpi_cols, y_pred_test):
         
@@ -172,20 +172,25 @@ def plot_charts(test_df, kpi_cols, y_pred_test):
 
 
 
-def inference_model_result(requestId : str, kpi_cols:list, use_cache:bool):
+def inference_model_result(requestId : str, kpi_cols:list, use_cache:bool, sql_db:Any):
 
-
-    try:
+    status_code = 0
+    status_msg= 'anomaly model failed'
+    try:        
         sql_query = "SELECT * FROM spt_anomaly_data"
         df, fetch_flag = _execute_sql_query(sql_db, sql_query)
 
         if fetch_flag==False:
-            AssertionError(f"Database connection failed.")
-        
+            status_code = 100
+            status_msg = "Database connection failed."
+            raise AssertionError(f"Database connection failed.")
+    
         if df.shape[0]==0 or df.shape[1]==0:
             Logger.info("the number of observation in sql dataframe is".format(df.shape[0]))
             Logger.info("the number of columns in sql dataframe are".format(str(df.columns)))
-            AssertionError(f"Enough Historical data not available in database table.")
+            status_code = 100
+            status_msg = "Empty historical data in database table"
+            raise AssertionError(f"Empty historical data in database table")
 
         #apply columns filter
         df = df[['week_start']+ kpi_cols]
@@ -195,13 +200,14 @@ def inference_model_result(requestId : str, kpi_cols:list, use_cache:bool):
         narrative_df = copy.deepcopy(merged_df)
         narrative_vars = add_wow_vars(narrative_df, kpi_cols)
 
-        window_num = 12
+        window_num = 6
+        tol = 0.8
         for col in kpi_cols:
             avg_kpi = merged_df[col].rolling(window=window_num).mean().dropna()
             dev_kpi = merged_df[col].rolling(window=window_num).std().dropna()
             merged_df['avg_'+col] = avg_kpi
-            merged_df['ub_'+col] = avg_kpi + dev_kpi
-            merged_df['lb_'+col] = avg_kpi - dev_kpi
+            merged_df['ub_'+col] = avg_kpi + tol*dev_kpi
+            merged_df['lb_'+col] = avg_kpi - tol*dev_kpi
             merged_df['dev_'+col] = dev_kpi
 
         input_df = copy.deepcopy(merged_df)
@@ -274,9 +280,10 @@ def inference_model_result(requestId : str, kpi_cols:list, use_cache:bool):
     
     except Exception as e:
         Logger.error(traceback.format_exc())
+        # Logger.exception("Error",e)
         response = []
-        status_code = 500
-        status_msg = "Anomaly service server failed"
+        status_code = 500 if status_code==0 else status_code
+        status_msg = "Anomaly service server failed" if status_code==0 else status_msg
         response_dict = {"status_code":status_code, "status_msg":status_msg, "data":response, "error":str(traceback.format_exc())}
     
     return response_dict
