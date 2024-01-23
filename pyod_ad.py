@@ -178,7 +178,6 @@ def inference_model_result(requestId : str, kpi_cols:list, use_cache:bool, sql_d
     status_msg= 'anomaly model failed'
     try:        
         sql_query = "SELECT * FROM spt_anomaly_data"
-
         df, fetch_flag = _execute_sql_query(sql_db, sql_query)
 
         if fetch_flag==False:
@@ -192,7 +191,6 @@ def inference_model_result(requestId : str, kpi_cols:list, use_cache:bool, sql_d
             status_code = 100
             status_msg = "Empty historical data in database table"
             raise AssertionError(f"Empty historical data in database table")
-
 
         #apply columns filter
         df = df[['week_start']+ kpi_cols]
