@@ -72,4 +72,4 @@ async def create_early_warning(input: Summary):
     return result
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=9704)
+    uvicorn.run(app, host="0.0.0.0", port=9704, ssl_keyfile="certs/c5ailabs.com.key", ssl_certfile="certs/c5ailabs.com.crt", ssl_ca_certs="certs/gd_bundle-g2-g1.crt")
