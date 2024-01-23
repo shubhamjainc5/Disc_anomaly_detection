@@ -13,4 +13,4 @@ RUN pip install -r requirements.txt
 EXPOSE 9704
 ENV PORT 9704
 
-ENTRYPOINT ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "9704"]
+ENTRYPOINT ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "9704", "--ssl-keyfile", "certs/c5ailabs.com.key" , "--ssl-certfile", "certs/c5ailabs.com.crt", "--ssl-ca-certs", "certs/gd_bundle-g2-g1.crt"]
