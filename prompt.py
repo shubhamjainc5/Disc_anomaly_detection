@@ -52,23 +52,23 @@ here is just an example to show how the narrative for anomalous points should lo
 "ForecastNarrative":[
 Dict(
 "anomaly_date":"2021-12-13",
-"narrative": "The Shipped Revenue is expected to (drop) by -14.04% below the average during the week starting (2021-12-13). Its predicted value for that week is $19.2M. Please take required remedial actions.",
-"narrative_html": "The <span style='font-weight:bold;'>Shipped Revenue</span> is expected to (<span style='font-weight:bold;'>drop</span>) by <span style='color:red;font-weight:bold;'>14.04</span>% below the average during the week starting (<span style='font-weight:bold;'>2021-12-13</span>). Its predicted value for that week is <span style='font-weight:bold;'>$19.2M</span> . Please take required remedial actions."
+"narrative": "The Shipped Revenue is expected to (drop) by -14.04% below the average during the week starting (2021-12-13). Its predicted value for that week is $19.2M.",
+"narrative_html": "The <span style='font-weight:bold;'>Shipped Revenue</span> is expected to (<span style='font-weight:bold;'>drop</span>) by <span style='color:red;font-weight:bold;'>14.04</span>% below the average during the week starting (<span style='font-weight:bold;'>2021-12-13</span>). Its predicted value for that week is <span style='font-weight:bold;'>$19.2M</span>."
 ),
 Dict(
 "anomaly_date":"2021-11-29",
-"narrative": "The Shipped Revenue for the week starting on 2021-11-29 is expected to be -15.46% below the average Shipped Revenue. The average Shipped Revenue for the previous week is $9.86M while the predicted Shipped Revenue for this week is $8.33M. It is recommended to take necessary actions to improve the Shipped Revenue.",
-"narrative_html": "The <span style='font-weight:bold;'>Shipped Revenue</span> for the week starting on <span style='font-weight:bold;'>2021-11-29</span> is expected to be <span style='color:red;font-weight:bold;'>15.46</span>% below the average <span style='font-weight:bold;'>Shipped Revenue</span>. The average <span style='font-weight:bold;'>Shipped Revenue</span> for the previous week is <span style='font-weight:bold;'>$9.86M</span> while the predicted <span style='font-weight:bold;'>Shipped Revenue</span> for this week is <span style='font-weight:bold;'>$8.33M</span>. It is recommended to take necessary actions to improve the <span style='font-weight:bold;'>Shipped Revenue</span>."
+"narrative": "The Shipped Revenue for the week starting on 2021-11-29 is expected to be -15.46% below the average Shipped Revenue. The average Shipped Revenue for the previous week is $9.86M while the predicted Shipped Revenue for this week is $8.33M.",
+"narrative_html": "The <span style='font-weight:bold;'>Shipped Revenue</span> for the week starting on <span style='font-weight:bold;'>2021-11-29</span> is expected to be <span style='color:red;font-weight:bold;'>15.46</span>% below the average <span style='font-weight:bold;'>Shipped Revenue</span>. The average <span style='font-weight:bold;'>Shipped Revenue</span> for the previous week is <span style='font-weight:bold;'>$9.86M</span> while the predicted <span style='font-weight:bold;'>Shipped Revenue</span> for this week is <span style='font-weight:bold;'>$8.33M</span>."
 )
             ]
 '''
 
 Please make sure you always abide by following rules:
-- You MUST provide narrative for each data point only based on the provided data only like shown in above examples. 
+- You MUST provide narrative for each data point only based on the provided data only like shown in above examples with some variations. 
 - You MUST not try to provide reasoning for the performance behaviour.
 - You MUST use different variation of words like 'increase/spike/rise' and 'decrease/drop' to indicate increase or decrease behaviour of kpi.
 
-Please make sure you always abide by the following rules to create reasoning in html format:
+Please make sure you always abide by the following rules to create narrative in html format:
 - ALWAYS allowed to use two colors [red, green] only.
 - ALWAYS use red color for highlighting decreasing % numeric values only.
 - ALWAYS use green color for highlighting increasing % numeric values only.
