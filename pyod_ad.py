@@ -11,7 +11,8 @@ import os
 import sys
 import pandas as pd
 import matplotlib.pyplot as plt
-from logging_handler import Logger
+import logging
+Logger = logging.getLogger('Anomaly')
 # temporary solution for relative imports in case pyod is not installed
 # if pyod is installed, no need to use the following line
 sys.path.append(

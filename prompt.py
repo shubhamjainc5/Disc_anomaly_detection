@@ -79,3 +79,47 @@ Please make sure you always abide by the following rules to create narrative in 
 Output JSON:
 """
 
+optimization_sys_prompt = """Given a time series forcasted table data of product sales, your job is to use your knowledge to first identify the reason for the predictive performance and then suggest corrective measures (actions which an organization can take to improve the respective kpi performance)."""
+
+optimization_prompt = """
+Below I am providing you forecasted table data in comma seperated format :
+{table_data}
+
+Above table contains future data for a KPI, KPI's 6 week's moving window average and the percentage of difference between kpi's actual value and kpi's moving window average value.
+
+you MUST only provide reasning and corrective measures only for below dates only:
+{anomaly_dates}
+
+here is just an example to show how the narrative for anomalous points should look like:
+'''
+"ForecastNarrative":[
+Dict(
+"anomaly_date":"2022-12-26",
+"narrative": "Based on the historical trend, Shipped Revenue value for the week starting with (2022-12-26) is expected to be arround $41.64M which would be -37.07% below past 6 weeks moving average. This downward trend could be because of seasonal variations,reduced customer spending and increased competition. you can take few actions like Plan marketing campaigns and promotions leading up to holidays, Analyze the competition and adjust pricing or offer unique promotions and refactor customer feedback & preferences on top of previous holiday marketing strategies.",
+"narrative_html": "Based on the historical trend,<span style='font-weight:bold;'>Shipped Revenue</span> value for the week starting with (<span style='font-weight:bold;'>2022-12-26</span>) is expected to be arround <span style='font-weight:bold;'>$41.64M</span> which would be <span style='color:red;font-weight:bold;'>37.07</span>% below past 6 weeks moving average. This downward trend can be because of seasonal variations,reduced customer spending and increased competition. you can take few actions like Plan marketing campaigns and promotions leading up to holidays, Analyze the competition and adjust pricing or offer unique promotions and refactor customer feedback & preferences on top of previous holiday marketing strategies."
+),
+Dict(
+"anomaly_date":"2023-04-03",
+"narrative": "The predicted shipped revenue for the week starting on 2023-04-03 is $39.86M, which is 16.36% below the average of the past 6 weeks. This decrease in revenue could be due to various factors such as changes in customer demand, market dynamics, or external economic conditions. To mitigate this, the organization can take several corrective measures. They can conduct market research to understand customer needs and preferences better. Optimizing the product portfolio to align with market trends and implementing targeted marketing campaigns can help attract new customers and retain existing ones. It is also important to monitor competitor strategies and adjust pricing or promotions accordingly.",
+"narrative_html": "The predicted <span style='font-weight:bold;'>Shipped Revenue</span> for the week starting on <span style='font-weight:bold;'>2023-04-03</span> is <span style='font-weight:bold;'>$39.86M</span>, which is <span style='color:red;font-weight:bold;'>16.36%</span> below the average of the past 6 weeks. This decrease in revenue could be due to various factors such as changes in customer demand, market dynamics, or external economic conditions. To mitigate this, the organization can take several corrective measures. They can conduct market research to understand customer needs and preferences better. Optimizing the product portfolio to align with market trends and implementing targeted marketing campaigns can help attract new customers and retain existing ones. It is also important to monitor competitor strategies and adjust pricing or promotions accordingly."
+)
+            ]
+'''
+
+Please make sure you always abide by following rules:
+- You MUST also provide reasoning for the forecasted behaviour why given kpi performance could have got dropped.
+- You MUST also provide list of actions(only for anomalous data points) which should clearly convey that what corrective measures can be adopted to avoid this drop in future. 
+- You MUST use different variation of words like 'increase/spike/rise' and 'decrease/drop' to indicate increase or decrease behaviour of kpi.
+- You MUST not use exact narrative given in above example.
+
+
+Please make sure you always abide by the following rules to create narrative in html format:
+- ALWAYS allowed to use two colors [red, green] only.
+- ALWAYS use red color for highlighting decreasing % numeric values only.
+- ALWAYS use green color for highlighting increasing % numeric values only.
+- ALWAUS use bold tags for highlighting metrics, dimensions and dates values only.
+- Be sure you MUST NOT change the actual meaning of narrative while converting it into html format.
+
+\n{format_instructions}
+Output JSON:
+"""

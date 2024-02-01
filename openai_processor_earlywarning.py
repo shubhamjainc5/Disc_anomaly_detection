@@ -12,7 +12,8 @@ import os
 import re
 import time
 import copy
-from logging_handler import Logger
+import logging
+Logger = logging.getLogger('openai-earlywarning')
 from langchain.schema import OutputParserException
 # openai is commented to avoid langchain resource not found error
 #import openai
@@ -131,7 +132,7 @@ def generate_ew_narrative(table_data:str,anomaly_dates:List, use_cache:bool) -> 
 
         try:
             reason_result = reason_parser.parse(generated_reasons).json()
-            reason_result = json.loads(reason_result)['AnomalyReasoning']
+            reason_result = json.loads(reason_result)['ForecastNarrative']
             Logger.info('\n Langchain json reason content parsed: {0}'.format(reason_result))
         except:
             reason_result = generated_reasons[generated_reasons.find('['): generated_reasons.rfind(']') + 1]

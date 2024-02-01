@@ -1,15 +1,19 @@
 """class and methods for logs handling."""
 
 import logging
+from logging.handlers import RotatingFileHandler
 
-logging.basicConfig(filename='app.log',
-                    filemode='a',
-    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s [%(filename)s:%(lineno)d] %(message)s', level=logging.DEBUG)
+logging.basicConfig(
+    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s [%(filename)s:%(lineno)d] %(message)s', level=logging.DEBUG,
+    handlers=[
+        RotatingFileHandler("logs/app.log", mode='a',maxBytes=1048576, backupCount=20, encoding ='utf'),
+        logging.StreamHandler()
+    ])
 
 numba_logger = logging.getLogger('numba')
 numba_logger.setLevel(logging.WARNING)
 
-Logger = logging.getLogger('DeepEarly')
+Logger = logging.getLogger('root')
 
 
 # class Logger():

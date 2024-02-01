@@ -18,3 +18,5 @@ docker run -it -d --restart=always -p 9704:9704 -v /home/ubuntu/ai_disc_anomaly_
 
 # check container logs
 docker logs --since=1h 61e843205b16
+
+docker logs -f 86d603f5101d

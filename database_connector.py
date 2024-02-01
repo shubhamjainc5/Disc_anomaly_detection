@@ -4,7 +4,8 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
 from sqlalchemy.engine import URL
-from logging_handler import Logger
+import logging
+Logger = logging.getLogger('DB_connect')
 import traceback
 
 class SQLDataBase:
