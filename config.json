@@ -1,7 +1,7 @@
 
 {
     "db_creds" : {
-    "database": "discoveryip-uat",
+    "database": "discoveryip-dev",
     "user": "postgres",
     "password": "73Y1ckO=S])][.R!",
     "host": "discovery-iip.postgres.database.azure.com",

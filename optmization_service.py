@@ -6,14 +6,14 @@ import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 import logging
-Logger = logging.getLogger('EarlyWarning')
+Logger = logging.getLogger('BusinessOptimization')
 # temporary solution for relative imports in case pyod is not installed
 # if pyod is installed, no need to use the following line
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname("__file__"), '..')))
 
 from typing import Dict, List, Any
-from openai_processor_earlywarning import generate_ew_narrative
+from openai_processor_optimization import generate_bo_narrative
 from numerize import numerize
 from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing, Holt
 from statsmodels.tsa.statespace.sarimax import SARIMAX 
@@ -91,7 +91,7 @@ def prepare_earlywarning_json(test_df, llm_op, sel_kpi):
     
     return rows_list
 
-def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool, sql_db:Any):
+def run_business_optimization(requestId : str, sel_kpi:str, use_cache:bool, sql_db:Any):
 
     status_code = 0
     status_msg= 'forecasting model failed'
@@ -119,8 +119,8 @@ def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool, sql_db:Any):
         merged_df['week_start'] = merged_df['week_start'].apply(lambda x: pd.to_datetime(x))
         merged_df = merged_df.set_index('week_start')
 
-        current_period = 1
-        forecast_period = 1
+        current_period = 0
+        forecast_period = 2
 
         p = domain_config["ew_model_config"][sel_kpi]["p"]
         d = domain_config["ew_model_config"][sel_kpi]["d"]
@@ -154,7 +154,8 @@ def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool, sql_db:Any):
         final_df['diff_avg_perc'] =  round( 100*(final_df[sel_kpi] - final_df['avg_'+sel_kpi] )/final_df['avg_'+sel_kpi] , 2)
         final_df['diff_avg_perc'] = final_df['diff_avg_perc'].apply(lambda x: str(x)+'%')
 
-        final_df['forecast_anomaly'] = (final_df[sel_kpi]<final_df['lb_'+sel_kpi]) | (final_df[sel_kpi]>final_df['ub_'+sel_kpi])
+        final_df['forecast_anomaly'] = (final_df[sel_kpi]<final_df['lb_'+sel_kpi]) 
+        #| (final_df[sel_kpi]>final_df['ub_'+sel_kpi])
         final_df['forecast_anomaly'] = final_df['forecast_anomaly'] & final_df['Forecasted']
 
         final_df = final_df[-(current_period*4+forecast_period*4):]
@@ -172,10 +173,11 @@ def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool, sql_db:Any):
 
         if len(anomaly_dates)>0:
 
-            filt_narrative_vars = final_df[final_df['forecast_anomaly']==True][['week_start',sel_kpi,'avg_'+sel_kpi,'diff_avg_perc']]
+            # filt_narrative_vars = final_df[final_df['forecast_anomaly']==True][['week_start',sel_kpi,'avg_'+sel_kpi,'diff_avg_perc']]
+            filt_narrative_vars = final_df[['week_start',sel_kpi,'avg_'+sel_kpi,'diff_avg_perc']]
             filt_narrative_vars[sel_kpi] = filt_narrative_vars[sel_kpi].apply(lambda x : '$'+numerize.numerize(x,2))
             filt_narrative_vars['avg_'+sel_kpi] = filt_narrative_vars['avg_'+sel_kpi].apply(lambda x : '$'+numerize.numerize(x,2))
-            op ,api_cnt, api_tokens, llm_status = generate_ew_narrative(filt_narrative_vars.to_csv(), anomaly_dates, use_cache)
+            op ,api_cnt, api_tokens, llm_status = generate_bo_narrative(filt_narrative_vars.to_csv(), anomaly_dates, use_cache)
             Logger.info(f"{api_cnt} API Calls were made with an average of {api_tokens} tokens per call for narrative generation")
 
             if llm_status in ["LLMParsed","LLMRetryParsed"]:
@@ -186,14 +188,14 @@ def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool, sql_db:Any):
                 status_msg = "LLM Server not responding"
             else:
                 status_code = 500
-                status_msg = "Anomaly service server failed"
+                status_msg = "optimization service server failed"
 
             print(op)
             #plot_charts(test_df, kpi_cols, y_pred_test)
         else:
             op = []
             status_code = 200
-            status_msg = "there are no anomalies present in anomaly table"
+            status_msg = " no anomalies found in forcasted data"
 
         response = prepare_earlywarning_json(final_df, op, sel_kpi)
         status_code = 200
@@ -206,7 +208,7 @@ def run_early_warning(requestId : str, sel_kpi:str, use_cache:bool, sql_db:Any):
         # Logger.exception("Error",e)
         response = []
         status_code = 500 if status_code==0 else status_code
-        status_msg = "Anomaly service server failed" if status_code==0 else status_msg
+        status_msg = "optimization service server failed" if status_code==0 else status_msg
         response_dict = {"status_code":status_code, "status_msg":status_msg, "data":response, "error":str(traceback.format_exc())}
     
     return response_dict

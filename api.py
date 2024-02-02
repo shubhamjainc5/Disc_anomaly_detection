@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import Dict, List, Any
 from pyod_ad import inference_model_result
 from early_warning_service import run_early_warning
+from optmization_service import run_business_optimization
 import uvicorn
 from logging_handler import Logger
 import time
@@ -67,6 +68,24 @@ async def create_early_warning(input: Summary):
     result = run_early_warning(requestId, sel_kpi, use_cache, sql_db)
     end_time = time.time()
     Logger.info("request {} for early warning service with cache = {} took {:.4f} seconds".format(requestId, use_cache, end_time - start_time))
+    
+
+    return result
+
+@app.post('/BusinessOptimization')
+async def plan_business_optimization(input: Summary):
+
+    requestId = input.sender
+    use_cache = True
+
+    start_time = time.time()
+    DB_CREDS = domain_config["db_creds"]
+    sql_db = SQLDataBase(DB_CREDS)
+    Logger.info("Received a request {0} for business optimization service with cache = {1}".format(requestId, use_cache))
+    sel_kpi = input.persona_config['persona_defaults']['metric'][0]['col_name']
+    result = run_business_optimization(requestId, sel_kpi, use_cache, sql_db)
+    end_time = time.time()
+    Logger.info("request {} for business optimization service with cache = {} took {:.4f} seconds".format(requestId, use_cache, end_time - start_time))
     
 
     return result

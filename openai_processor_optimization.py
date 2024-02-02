@@ -10,10 +10,10 @@ import json
 import numpy as np
 import os
 import re
-import copy
 import time
+import copy
 import logging
-Logger = logging.getLogger('openai-anomaly')
+Logger = logging.getLogger('openai-optimization')
 from langchain.schema import OutputParserException
 # openai is commented to avoid langchain resource not found error
 #import openai
@@ -47,7 +47,7 @@ from typing import List
 
 import ast
 
-from prompt import  reasoning_sys_prompt, reasoning_prompt
+from prompt import  optimization_sys_prompt, optimization_prompt
 
 
 with open("config.json", "r") as f:
@@ -55,7 +55,7 @@ with open("config.json", "r") as f:
 
 
 # Set llm_cache
-globals.set_llm_cache(SQLiteCache(database_path="cache.db"))
+globals.set_llm_cache(SQLiteCache(database_path="bo_cache.db"))
 
 
 os.environ["OPENAI_API_TYPE"] = domain_config['OPENAI_API_TYPE']
@@ -64,20 +64,20 @@ os.environ["OPENAI_API_BASE"] = domain_config['OPENAI_API_BASE']
 os.environ["OPENAI_API_KEY"] = domain_config['OPEN_AI_API_KEY']
 
 
-class Reasoning(BaseModel):
+class Narrative(BaseModel):
 
     anomaly_date: str = Field(description="anomaly dates which were present in table data")
-    reason: str = Field(description="casual reasoning with respect to selected anomaly date")
-    reason_html: str = Field(description="casual reasoning in html format")
+    narrative: str = Field(description="narrative with respect to selected anomaly date")
+    narrative_html: str = Field(description="narrative in html format")
 
 
-class AnomalyReasoningPlainText(BaseModel):
+class ForecastNarrativePlainText(BaseModel):
 
-    AnomalyReasoning: List[Reasoning] = Field(description="a set of anomalous points with their date and it's casual reasoning in dictionary format")
+    ForecastNarrative: List[Narrative] = Field(description="a set of anomalous points with their date and it's narrative in dictionary format")
 
 
-def generate_reasoning(table_data:str, anomaly_dates:List, use_cache:bool) -> (List[Dict[str,str]], int, float):
-    print('\n---------Casual Reasoning-------------\n')
+def generate_bo_narrative(table_data:str,anomaly_dates:List, use_cache:bool) -> (List[Dict[str,str]], int, float):
+    print('\n---------Business Optmization-------------\n')
 
     cnt = 0
     call_tokens = []
@@ -90,36 +90,36 @@ def generate_reasoning(table_data:str, anomaly_dates:List, use_cache:bool) -> (L
             deployment_name=domain_config['AZURE_DEPLOYMENT_NAME'],
             model_name=domain_config['AZURE_MODEL_NAME'],
             max_tokens=2000,
-            temperature=0.5,
+            temperature=0.7,
             verbose=True,
             request_timeout=20,
             cache= use_cache
         )
 
-        system_message_prompt = SystemMessagePromptTemplate.from_template(reasoning_sys_prompt)
+        system_message_prompt = SystemMessagePromptTemplate.from_template(optimization_sys_prompt)
 
-        reason_parser = PydanticOutputParser(pydantic_object=AnomalyReasoningPlainText)
+        reason_parser = PydanticOutputParser(pydantic_object=ForecastNarrativePlainText)
         reason_format_instructions = reason_parser.get_format_instructions()
 
-        reason_template = PromptTemplate(input_variables=["table_data"], template=reasoning_prompt,
+        reason_template = PromptTemplate(input_variables=["table_data", "anomaly_dates"], template=optimization_prompt,
                                         partial_variables={"format_instructions": reason_format_instructions})
         
-        reason_prompt = reason_template.format(table_data=table_data, format_instructions = reason_format_instructions)
+        reason_prompt = reason_template.format(table_data=table_data, anomaly_dates = anomaly_dates, format_instructions = reason_format_instructions)
         # print(reason_prompt)
 
         human_message_prompt = HumanMessagePromptTemplate(prompt=reason_template)
 
         chat_prompt = ChatPromptTemplate.from_messages([system_message_prompt, human_message_prompt])
 
-        reason_chain = LLMChain(llm=model, prompt=chat_prompt, output_key="generated_reasoning")
+        reason_chain = LLMChain(llm=model, prompt=chat_prompt, output_key="generated_narrative")
 
         start_time = time.time()
-        gpt_op = reason_chain({"table_data": table_data})
+        gpt_op = reason_chain({"table_data": table_data, "anomaly_dates":anomaly_dates})
         Logger.info("\n Response from GPT : {0}".format(gpt_op))
         end_time = time.time()
         Logger.info("LLM output took {:.4f} seconds".format(end_time - start_time))
 
-        generated_reasons = gpt_op['generated_reasoning']
+        generated_reasons = gpt_op['generated_narrative']
         # print(generated_reasons)
 
         start_time = time.time()
@@ -132,7 +132,7 @@ def generate_reasoning(table_data:str, anomaly_dates:List, use_cache:bool) -> (L
 
         try:
             reason_result = reason_parser.parse(generated_reasons).json()
-            reason_result = json.loads(reason_result)['AnomalyReasoning']
+            reason_result = json.loads(reason_result)['ForecastNarrative']
             Logger.info('\n Langchain json reason content parsed: {0}'.format(reason_result))
         except:
             reason_result = generated_reasons[generated_reasons.find('['): generated_reasons.rfind(']') + 1]
